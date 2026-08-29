@@ -138,4 +138,4 @@ patches:
     kind: Deployment
     name: auth-service
 
-images:[]
+images: []
