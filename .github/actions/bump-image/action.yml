@@ -1,0 +1,83 @@
+name: Bump one service's image tag
+description: >
+  Pins a single service's image tag in its Kustomize overlay and commits the
+  change to main. That's the entire hand-off to CD: Argo CD watches this
+  repo's k8s/overlays/<env> paths and applies the resulting diff itself.
+  This action never touches a cluster and needs no kubeconfig.
+
+inputs:
+  service:
+    required: true
+    description: Directory name under services/, e.g. auth-service
+  environment:
+    required: true
+    description: dev | uat | production
+  overlay:
+    required: true
+    description: Path to the kustomize overlay, e.g. k8s/overlays/dev
+  image_tag:
+    required: true
+    description: Short SHA the build job pushed
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        ref: main
+
+    - name: Set up kustomize
+      uses: imranismail/setup-kustomize@v2
+
+    - name: Pin ${{ inputs.service }} image for ${{ inputs.environment }} (with retry)
+      shell: bash
+      run: |
+        set -euo pipefail
+        REPO="${GITHUB_REPOSITORY,,}"   # ghcr requires lowercase
+        IMAGE="ghcr.io/${REPO}/${{ inputs.service }}"
+        OVERLAY="${{ inputs.overlay }}"
+
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+
+        # main moves constantly here: every service's bump jobs commit to it.
+        # The pipeline's shared `queue: max` concurrency group already runs
+        # bumps one by one, but retries make the push bullet-proof anyway
+        # (e.g. a bump in another *environment's* queue, or a human commit,
+        # landing between our fetch and our push).
+        #
+        # Each attempt starts from a hard reset onto the freshest
+        # origin/main and REDOES the one-line kustomize edit on top of it,
+        # so — unlike a rebase — a competing commit can never produce a
+        # merge conflict: we always rebuild our change on whatever main
+        # looks like right now, then try to push it.
+        MAX_ATTEMPTS=8
+        for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
+          git fetch origin main
+          git reset --hard origin/main
+
+          (cd "$OVERLAY" && kustomize edit set image "${IMAGE}=${IMAGE}:${{ inputs.image_tag }}")
+
+          if git diff --quiet -- "${OVERLAY}/kustomization.yaml"; then
+            echo "Image already pinned to ${{ inputs.image_tag }} — nothing to commit."
+            exit 0
+          fi
+
+          git add "${OVERLAY}/kustomization.yaml"
+          git commit -m "ci(${{ inputs.service }}): bump ${{ inputs.environment }} to ${{ inputs.image_tag }} [skip ci]"
+
+          if git push origin HEAD:main; then
+            echo "Pushed on attempt ${attempt}/${MAX_ATTEMPTS}."
+            exit 0
+          fi
+
+          # Exponential backoff (2,4,8,16,32,32,32s) plus 0-4s of jitter so
+          # two losing jobs don't wake up and collide again in lockstep.
+          backoff=$(( 2 ** (attempt < 5 ? attempt : 5) + RANDOM % 5 ))
+          echo "Push rejected (attempt ${attempt}/${MAX_ATTEMPTS}); retrying in ${backoff}s..."
+          sleep "$backoff"
+        done
+
+        echo "Failed to push after ${MAX_ATTEMPTS} attempts." >&2
+        exit 1
