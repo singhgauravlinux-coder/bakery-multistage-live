@@ -93,6 +93,9 @@ images:
 - name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/payment-service
   newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/payment-service
   newTag: ddef325
+- name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/pricing-service
+  newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/pricing-service
+  newTag: ddef325
 - name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/product-catalog-service
   newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/product-catalog-service
   newTag: ddef325
