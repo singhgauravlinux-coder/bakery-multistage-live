@@ -1,0 +1,135 @@
+# notification-worker — consumer half of the notification service.
+#
+# Runs the SAME image as notification-service with a different command, so the
+# existing notification-service CI pipeline and the per-overlay image pinning
+# cover it automatically (kustomize `images:` matches on image name, not on
+# Deployment). It takes no inbound traffic, so there is deliberately no
+# Service object — only the kubelet talks to its probe port.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-worker
+  namespace: bakery
+  labels:
+    app: notification-worker
+    app.kubernetes.io/part-of: crumb-and-ember
+    app.kubernetes.io/component: worker
+spec:
+  # Workers claim jobs with FOR UPDATE SKIP LOCKED, so replicas can be raised
+  # freely — two rows are never handed to two pods.
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification-worker
+  template:
+    metadata:
+      labels:
+        app: notification-worker
+        app.kubernetes.io/component: worker
+    spec:
+      # Long enough for an in-flight delivery to finish; the worker stops
+      # claiming on SIGTERM and drains (WORKER_SHUTDOWN_GRACE_MS).
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: notification-worker
+          image: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/notification-service:2e71aee
+          imagePullPolicy: Always
+          command: ["node", "worker.js"]
+          ports:
+            - name: probe
+              containerPort: 3110
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          env:
+            - name: SERVICE_NAME
+              value: "notification-worker"
+            - name: WORKER_PROBE_PORT
+              value: "3110"
+            - name: LOG_LEVEL
+              value: "info"
+            - name: WORKER_BATCH_SIZE
+              value: "10"
+            - name: WORKER_CONCURRENCY
+              value: "5"
+            - name: WORKER_POLL_INTERVAL_MS
+              value: "1000"
+            - name: WORKER_IDLE_INTERVAL_MS
+              value: "5000"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: bakery-db-secret
+                  key: DATABASE_URL
+            # SMTP settings come from the `smtp-credentials` Secret, which is
+            # applied out of band with kubectl (see
+            # k8s/base/secrets.smtp.example.yaml) so no credential is ever
+            # committed or rendered into an overlay. Every key is optional:
+            # without the Secret the worker still starts and mocks email.
+            - name: SMTP_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: smtp-credentials
+                  key: host
+                  optional: true
+            - name: SMTP_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: smtp-credentials
+                  key: port
+                  optional: true
+            - name: SMTP_SECURE
+              valueFrom:
+                secretKeyRef:
+                  name: smtp-credentials
+                  key: secure
+                  optional: true
+            - name: SMTP_USER
+              valueFrom:
+                secretKeyRef:
+                  name: smtp-credentials
+                  key: username
+                  optional: true
+            - name: SMTP_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: smtp-credentials
+                  key: password
+                  optional: true
+            - name: SMTP_FROM
+              valueFrom:
+                secretKeyRef:
+                  name: smtp-credentials
+                  key: from
+                  optional: true
+            # Gmail throttles parallel sessions; keep the pool at 1 there.
+            - name: SMTP_MAX_CONNECTIONS
+              value: "1"
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 3110
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3110
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+

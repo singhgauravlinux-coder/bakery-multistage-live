@@ -1,0 +1,63 @@
+# Dedicated Ingress for the API documentation.
+#
+# Why this exists: Swagger UI used to be mounted inside the gateway at
+# /api/docs, which meant anything that could reach the API could also read the
+# whole API surface, and there was no way to protect it without also
+# protecting /api. The docs now run on their own listener (port 3100 ->
+# Service `api-docs`) and are published here, on their own host, so access is
+# an edge decision.
+#
+# The main bakery-ingress no longer routes /api/docs at all — the gateway
+# returns 404 for it (API_DOCS_ON_GATEWAY=false).
+#
+# Host per environment is patched by the overlays:
+#   dev  -> docs.dev.bakery.local
+#   uat  -> docs.uat.bakery.local
+#   prod -> not deployed (the production overlay does not include ../../base/ingress)
+#
+# To publish nothing at all, simply drop this file from
+# k8s/base/ingress/kustomization.yaml.
+---
+# Optional basic-auth in front of the docs. Create the secret first:
+#
+#   htpasswd -nb docs 'a-strong-password' | base64 -w0
+#   kubectl -n bakery-dev create secret generic docs-basic-auth \
+#     --from-literal=users='docs:$apr1$....'
+#
+# then uncomment the router.middlewares annotation on the Ingress below.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: docs-basic-auth
+  namespace: bakery
+spec:
+  basicAuth:
+    secret: docs-basic-auth
+    realm: "Crumb & Ember API docs"
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: bakery-docs-ingress
+  namespace: bakery
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+    # Uncomment once the docs-basic-auth secret exists in the target
+    # namespace. Format: <namespace>-<middleware>@kubernetescrd
+#    traefik.ingress.kubernetes.io/router.middlewares: bakery-dev-docs-basic-auth@kubernetescrd
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: docs.bakery.local
+      http:
+        paths:
+          # Serves both / (redirects to /api/docs) and /api/docs directly,
+          # so either URL shape works behind this host.
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: api-docs
+                port:
+                  number: 3100
+

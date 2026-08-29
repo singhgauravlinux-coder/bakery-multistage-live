@@ -1,0 +1,217 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# ---------------------------------------------------------------------------
+# DEV overlay
+#   - one namespace per env, everything else inherited from ../../base
+#   - 1 replica per service (cheap, fast feedback)
+#   - images are pinned per-service by the service's own CI pipeline via
+#     `kustomize edit set image` (see .github/workflows/_service-pipeline.yml)
+# ---------------------------------------------------------------------------
+
+  # Every service Deployment has exactly one container, so a positional
+  # JSON6902 patch (index 0) works regardless of container name and applies
+  # identically to all 25 services in one shot.
+namespace: bakery-dev
+
+resources:
+- ../../base
+- ../../base/ingress
+
+commonLabels:
+  environment: dev
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Image tags are rewritten in-place by each service's pipeline, e.g.:
+#   images:
+#     - name: ghcr.io/OWNER/bakery-language/auth-service
+#       newTag: <short-sha>
+# The blanket replicas patch above also hits notification-worker. Delivery
+# throughput should scale independently of the API, and SKIP LOCKED claiming
+# makes extra replicas safe, so it is set explicitly here (this patch is
+# listed after the blanket one, so it wins).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# The verification email links back into the SPA, so the base URL has to be
+# this environment's public host or the link lands on the wrong stack.
+
+
+
+patches:
+- path: patch-ingress-host.yaml
+  target:
+    kind: Ingress
+    name: bakery-ingress
+- path: patch-ingress-middleware.yaml
+  target:
+    kind: Ingress
+    name: bakery-ingress
+- path: patch-db-ingress-host.yaml
+  target:
+    kind: Ingress
+    name: bakery-db-ingress
+- path: patch-docs-ingress-host.yaml
+  target:
+    kind: Ingress
+    name: bakery-docs-ingress
+- patch: |-
+    - op: replace
+      path: /spec/template/spec/containers/0/resources
+      value:
+        requests:
+          cpu: 25m
+          memory: 64Mi
+        limits:
+          cpu: 150m
+          memory: 192Mi
+
+    - op: replace
+      path: /spec/replicas
+      value: 1
+  target:
+    kind: Deployment
+    labelSelector: app.kubernetes.io/part-of=crumb-and-ember
+- patch: |-
+    - op: replace
+      path: /spec/replicas
+      value: 1
+  target:
+    kind: Deployment
+    name: notification-worker
+- patch: |-
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: auth-service
+    spec:
+      template:
+        spec:
+          containers:
+            - name: auth-service
+              env:
+                - name: APP_BASE_URL
+                  value: "http://dev.bakery.local"
+  target:
+    kind: Deployment
+    name: auth-service
+
+images:
+- name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/analytics-service
+  newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/analytics-service
+  newTag: d30780b
+- name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/api-gateway
+  newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/api-gateway
+  newTag: d615736
+- name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/auth-service
+  newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/auth-service
+  newTag: 4b463b7
+- name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/baking-schedule-service
+  newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/baking-schedule-service
+  newTag: d30780b
+- name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/cart-service
+  newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/cart-service
+  newTag: d30780b
+- name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/currency-service
+  newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/currency-service
+  newTag: d30780b
+- name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/delivery-service
+  newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/delivery-service
+  newTag: d30780b
+- name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/frontend
+  newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/frontend
+  newTag: 91284ec
+- name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/inventory-service
+  newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/inventory-service
+  newTag: d30780b
+- name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/invoice-service
+  newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/invoice-service
+  newTag: d30780b
+- name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/language-service
+  newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/language-service
+  newTag: d30780b
+- name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/loyalty-service
+  newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/loyalty-service
+  newTag: d30780b
+- name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/media-service
+  newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/media-service
+  newTag: d30780b
+- name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/notification-service
+  newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/notification-service
+  newTag: d9511f9
+- name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/order-service
+  newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/order-service
+  newTag: d30780b
+- name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/payment-service
+  newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/payment-service
+  newTag: d30780b
+- name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/pricing-service
+  newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/pricing-service
+  newTag: d30780b
+- name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/product-catalog-service
+  newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/product-catalog-service
+  newTag: d30780b
+- name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/promotion-service
+  newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/promotion-service
+  newTag: d30780b
+- name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/recipe-service
+  newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/recipe-service
+  newTag: d30780b
+- name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/recommendation-service
+  newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/recommendation-service
+  newTag: d30780b
+- name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/review-service
+  newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/review-service
+  newTag: d30780b
+- name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/search-service
+  newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/search-service
+  newTag: d30780b
+- name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/supplier-service
+  newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/supplier-service
+  newTag: d30780b
+- name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/user-service
+  newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/user-service
+  newTag: d30780b
+

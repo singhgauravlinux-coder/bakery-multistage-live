@@ -1,0 +1,106 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+  namespace: bakery
+  labels:
+    app: auth-service
+    app.kubernetes.io/part-of: crumb-and-ember
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth-service
+  template:
+    metadata:
+      labels:
+        app: auth-service
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: auth-service
+          image: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/auth-service:2e71aee
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3001
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          env:
+            - name: SERVICE_NAME
+              value: "auth-service"
+            - name: PORT
+              value: "3001"
+            - name: LOG_LEVEL
+              value: "info"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: bakery-db-secret
+                  key: DATABASE_URL
+            - name: AUTH_TOKEN_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: bakery-db-secret
+                  key: AUTH_TOKEN_SECRET
+            # --- session policy ------------------------------------------
+            # Access tokens are short-lived and renewed silently by the
+            # browser with a rotating refresh token. A session ends on
+            # whichever comes first: inactivity (idle) or the hard ceiling
+            # measured from login (absolute).
+            - name: AUTH_ACCESS_TOKEN_TTL_MS
+              value: "900000"        # 15 minutes
+            - name: AUTH_REFRESH_TOKEN_TTL_MS
+              value: "604800000"     # 7 days
+            - name: AUTH_SESSION_IDLE_TIMEOUT_MS
+              value: "1800000"       # 30 minutes of inactivity
+            - name: AUTH_SESSION_ABSOLUTE_TTL_MS
+              value: "43200000"      # 12 hours from sign-in
+            # Public origin used to build the link inside verification
+            # emails. Must match the host users actually browse.
+            - name: APP_BASE_URL
+              value: "http://bakery.local"
+            - name: AUTH_VERIFY_POLL_INTERVAL_MS
+              value: "5000"
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 3001
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3001
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+  namespace: bakery
+  labels:
+    app: auth-service
+spec:
+  selector:
+    app: auth-service
+  ports:
+    - port: 3001
+      targetPort: 3001
+      protocol: TCP
+

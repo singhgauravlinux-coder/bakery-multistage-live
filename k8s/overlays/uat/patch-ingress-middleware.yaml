@@ -1,0 +1,4 @@
+- op: add
+  path: /metadata/annotations/traefik.ingress.kubernetes.io~1router.middlewares
+  value: bakery-uat-body-limit@kubernetescrd
+
