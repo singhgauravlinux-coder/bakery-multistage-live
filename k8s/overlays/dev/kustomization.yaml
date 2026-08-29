@@ -102,6 +102,7 @@ commonLabels:
 
 
 
+
 patches:
 - path: patch-ingress-host.yaml
   target:
@@ -169,6 +170,9 @@ images:
   newTag: ddef325
 - name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/auth-service
   newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/auth-service
+  newTag: ddef325
+- name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/baking-schedule-service
+  newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/baking-schedule-service
   newTag: ddef325
 - name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/cart-service
   newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/cart-service
