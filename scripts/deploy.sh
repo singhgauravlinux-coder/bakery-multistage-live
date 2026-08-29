@@ -112,8 +112,13 @@ log "Applying secrets (bakery-db-secret, razorpay-credentials)"
 apply_kinds Secret
 
 # --------------------------------------------------------------- data layer
+# NOTE: includes .kind == "ConfigMap" so data-layer ConfigMaps (e.g.
+# bakery-db-init, mounted into the postgres StatefulSet) get applied here.
+# Without it, only resources literally named postgres/redis/adminer pass
+# the filter, bakery-db-init is silently skipped, and the postgres pod
+# never becomes ready (missing volume) — deploy hangs on wait_for_rollout.
 log "Deploying data layer (postgres, redis, adminer)"
-yq eval 'select(.metadata.name == "postgres" or .metadata.name == "redis" or .metadata.name == "adminer")' "$RENDERED" \
+yq eval 'select(.kind == "ConfigMap" or .metadata.name == "postgres" or .metadata.name == "redis" or .metadata.name == "adminer")' "$RENDERED" \
   | kubectl apply -f -
 wait_for_rollout statefulset postgres
 wait_for_rollout deployment redis
@@ -137,4 +142,3 @@ apply_kinds Middleware Ingress
 
 log "All ${#SERVICES[@]} services deployed and healthy in ${ENVIRONMENT} (namespace ${NAMESPACE})"
 kubectl -n "$NAMESPACE" get pods
-
