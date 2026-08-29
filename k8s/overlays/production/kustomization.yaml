@@ -69,3 +69,6 @@ images:
 - name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/review-service
   newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/review-service
   newTag: ddef325
+- name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/user-service
+  newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/user-service
+  newTag: ddef325
