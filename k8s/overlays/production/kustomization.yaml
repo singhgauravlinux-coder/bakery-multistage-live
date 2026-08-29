@@ -66,6 +66,9 @@ images:
 - name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/auth-service
   newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/auth-service
   newTag: ddef325
+- name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/currency-service
+  newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/currency-service
+  newTag: ddef325
 - name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/delivery-service
   newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/delivery-service
   newTag: ddef325
