@@ -59,4 +59,4 @@ patches:
   target:
     kind: Deployment
     name: auth-service
-images:[]
+images: []
