@@ -66,3 +66,6 @@ images:
 - name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/notification-service
   newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/notification-service
   newTag: ddef325
+- name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/review-service
+  newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/review-service
+  newTag: ddef325
