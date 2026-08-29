@@ -81,6 +81,7 @@ commonLabels:
 
 
 
+
 patches:
 - path: patch-ingress-host.yaml
   target:
@@ -140,6 +141,9 @@ patches:
     name: auth-service
 
 images:
+- name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/loyalty-service
+  newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/loyalty-service
+  newTag: ddef325
 - name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/notification-service
   newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/notification-service
   newTag: ddef325
