@@ -84,6 +84,9 @@ images:
 - name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/inventory-service
   newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/inventory-service
   newTag: ddef325
+- name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/invoice-service
+  newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/invoice-service
+  newTag: ddef325
 - name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/language-service
   newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/language-service
   newTag: ddef325
