@@ -90,6 +90,7 @@ commonLabels:
 
 
 
+
 patches:
 - path: patch-ingress-host.yaml
   target:
@@ -149,6 +150,9 @@ patches:
     name: auth-service
 
 images:
+- name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/api-gateway
+  newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/api-gateway
+  newTag: ddef325
 - name: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/auth-service
   newName: ghcr.io/singhgauravlinux-coder/bakery-multistage-live/auth-service
   newTag: ddef325
